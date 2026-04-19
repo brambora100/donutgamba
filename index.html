@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DonutFlip | Wheel Casino</title>
+    <title>DonutGamba | Wheel Casino</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -73,26 +73,26 @@
 
 <div id="auth-overlay">
     <div class="login-card">
-        <h1 style="margin-bottom: 20px;">DONUT<span>FLIP</span></h1>
+        <h1 style="margin-bottom: 20px;">DONUT<span>GAMBA</span></h1>
         <div id="auth-box">
             <input type="text" id="nick-input" class="styled-input" placeholder="Minecraft Nick">
-            <button class="btn-play" onclick="handleAuth()">VSTOUPIT</button>
+            <button class="btn-play" onclick="handleAuth()">ENTER</button>
         </div>
         <div id="verify-box" style="display:none">
             <div id="v-msg" style="background: #000; padding: 20px; border-radius: 15px; color: var(--accent); font-weight: 800; font-family: monospace;"></div>
-            <p style="margin-top: 15px; font-size: 13px; color: var(--text-dim);">Pošli tuhle zprávu uživateli <strong>tickony</strong> ve hře.</p>
+            <p style="margin-top: 15px; font-size: 13px; color: var(--text-dim);">Send this message to <strong>donutgamba1528</strong> in-game.</p>
         </div>
     </div>
 </div>
 
 <header>
-    <div style="font-weight: 800; font-size: 24px;">DONUT<span>FLIP</span></div>
+    <div style="font-weight: 800; font-size: 24px;">DONUT<span>GAMBA</span></div>
     <div class="header-right">
         <div class="user-pill" onclick="openWallet()">
             <span id="display-bal" style="color: var(--accent); font-weight: 800; font-size: 18px;">0 $</span>
             <img id="display-avatar" src="" style="width:35px; height:35px; border-radius:8px; background:#000;">
         </div>
-        <button class="btn-logout" onclick="logout()">ODHLÁSIT</button>
+        <button class="btn-logout" onclick="logout()">LOG OUT</button>
     </div>
 </header>
 
@@ -100,15 +100,15 @@
     <div class="sidebar">
         <label style="font-size: 11px; font-weight: 800; color: var(--text-dim); letter-spacing: 1px;">SÁZKA (Max 1M $)</label>
         <input type="number" id="bet-amount" class="styled-input" value="1000">
-        <button id="spin-button" class="btn-play" onclick="playGame()">ROZTOČIT KOLO</button>
+        <button id="spin-button" class="btn-play" onclick="playGame()">SPIN THE WHEEL</button>
 
         <div class="wager-info">
             <div style="display:flex; justify-content:space-between; font-size: 12px; font-weight: 700;">
-                <span>PROTOČENO</span>
+                <span>WAGERED</span>
                 <span id="wager-text">0 / 0 $</span>
             </div>
             <div class="wager-bar-bg"><div id="wager-progress"></div></div>
-            <p style="font-size: 10px; color: var(--text-dim); margin-top: 10px;">Musíš protočit 5x svůj vklad pro výběr.</p>
+            <p style="font-size: 10px; color: var(--text-dim); margin-top: 10px;">You must wager 5x your deposit to withdraw.</p>
         </div>
     </div>
 
@@ -126,21 +126,21 @@
 
 <div class="modal" id="wallet-modal">
     <div class="wallet-card">
-        <h2 style="font-weight: 800;">Moje Peněženka</h2>
+        <h2 style="font-weight: 800;">My Wallet</h2>
         <div id="wallet-bal-val" class="balance-value">0 $</div>
         <input type="number" id="tx-amount" class="styled-input" placeholder="Částka..." style="text-align: center;">
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-            <button class="btn-play" onclick="submitTx('dep')">VLOŽIT</button>
+            <button class="btn-play" onclick="submitTx('dep')">INSERT</button>
             <button id="withdraw-btn" class="btn-play" style="background:#1c2635; color:#fff;" onclick="submitTx('wit')">VYBRAT</button>
         </div>
 
         <div id="deposit-instr">
-            <p style="font-size: 13px; font-weight: 600;">Pro dokončení vkladu napiš ve hře:</p>
-            <span class="cmd-box" id="copy-cmd">/pay tickony ČÁSTKA</span>
-            <p style="font-size: 11px; color: var(--text-dim); margin-top: 8px;">Peníze budou připsány po potvrzení adminem.</p>
+            <p style="font-size: 13px; font-weight: 600;">To complete your deposit, type in the game:</p>
+            <span class="cmd-box" id="copy-cmd">/pay donutgamba1528 AMOUNT</span>
+            <p style="font-size: 11px; color: var(--text-dim); margin-top: 8px;">The money will be credited within a few minutes.</p>
         </div>
 
-        <p onclick="closeWallet()" style="margin-top:25px; cursor:pointer; color:var(--text-dim); font-weight:700;">Zavřít</p>
+        <p onclick="closeWallet()" style="margin-top:25px; cursor:pointer; color:var(--text-dim); font-weight:700;">Close</p>
     </div>
 </div>
 
@@ -206,7 +206,7 @@
             } else {
                 document.getElementById('auth-box').style.display = 'none';
                 document.getElementById('verify-box').style.display = 'block';
-                document.getElementById('v-msg').innerText = `/msg tickony ${user.vCode}`;
+                document.getElementById('v-msg').innerText = `/msg donutgamba1528 ${user.vCode}`;
             }
         });
     }
@@ -242,20 +242,20 @@
 
     function showResult(win, bet) {
         const over = document.getElementById('result-overlay'), status = document.getElementById('res-status'), val = document.getElementById('res-value');
-        if(win > bet) { status.innerText = "VÝHRA"; status.style.color = "var(--accent)"; val.innerText = "+" + win.toLocaleString() + " $"; val.style.color = "var(--accent)"; }
-        else if (win > 0) { status.innerText = "ČÁSTEČNÁ"; status.style.color = "#f5c842"; val.innerText = "+" + win.toLocaleString() + " $"; val.style.color = "#f5c842"; }
-        else { status.innerText = "PROHRA"; status.style.color = "var(--red)"; val.innerText = "-" + bet.toLocaleString() + " $"; val.style.color = "var(--red)"; }
+        if(win > bet) { status.innerText = "WIN"; status.style.color = "var(--accent)"; val.innerText = "+" + win.toLocaleString() + " $"; val.style.color = "var(--accent)"; }
+        else if (win > 0) { status.innerText = "PARTIAL"; status.style.color = "#f5c842"; val.innerText = "+" + win.toLocaleString() + " $"; val.style.color = "#f5c842"; }
+        else { status.innerText = "LOSS"; status.style.color = "var(--red)"; val.innerText = "-" + bet.toLocaleString() + " $"; val.style.color = "var(--red)"; }
         over.classList.add('show');
     }
 
     async function submitTx(type) {
         const input = document.getElementById('tx-amount'), amt = Number(input.value);
-        if(!amt || amt < 100) return alert("Minimálně 100 $");
+        if(!amt || amt < 100) return alert("Minimum $100");
 
         if(type === 'dep') {
             // Zobrazení příkazu pro vklad
             document.getElementById('deposit-instr').style.display = 'block';
-            document.getElementById('copy-cmd').innerText = `/pay tickony ${amt}`;
+            document.getElementById('copy-cmd').innerText = `/pay donutgamba1528 ${amt}`;
         }
 
         if(type === 'wit') {
