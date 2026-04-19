@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DonutFlip | Wheel Casino</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --accent: #4cf09a;
+            --accent-glow: rgba(76, 240, 154, 0.4);
+            --bg: #060c15;
+            --panel: #0d131c;
+            --panel-light: #161f2c;
+            --border: #1e2632;
+            --text-main: #ffffff;
+            --text-dim: #8a99ad;
+            --red: #ff4d4d;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: var(--bg); color: var(--text-main); font-family: 'Plus Jakarta Sans', sans-serif;
+            background-image: radial-gradient(circle at 50% -20%, #162a3d 0%, var(--bg) 80%);
+            height: 100vh; overflow: hidden;
+        }
+
+        /* --- AUTH --- */
+        #auth-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
+        .login-card { background: var(--panel); padding: 40px; border-radius: 32px; border: 1px solid var(--border); width: 420px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+
+        /* --- HEADER --- */
+        header { 
+            height: 80px; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; 
+            background: rgba(13, 19, 28, 0.8); border-bottom: 1px solid var(--border);
+        }
+        
+        .header-right { display: flex; align-items: center; gap: 15px; }
+
+        .user-pill { background: var(--panel-light); border: 1px solid var(--border); padding: 5px 15px; border-radius: 100px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; }
+        .user-pill:hover { border-color: var(--accent); }
+
+        .btn-logout { 
+            background: rgba(255, 77, 77, 0.1); border: 1px solid rgba(255, 77, 77, 0.2); 
+            color: var(--red); padding: 8px 15px; border-radius: 12px; font-weight: 700; 
+            font-size: 12px; cursor: pointer; transition: 0.2s;
+        }
+        .btn-logout:hover { background: var(--red); color: white; }
+
+        /* --- LAYOUT --- */
+        .main-content { display: grid; grid-template-columns: 350px 1fr; height: calc(100vh - 80px); }
+        .sidebar { padding: 40px; border-right: 1px solid var(--border); background: rgba(13, 19, 28, 0.4); }
+
+        /* --- WHEEL --- */
+        .wheel-container { position: relative; width: 500px; height: 500px; }
+        .pointer { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 30px; height: 40px; background: white; clip-path: polygon(0% 0%, 100% 0%, 50% 100%); z-index: 100; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+        #wheel-canvas { width: 100%; height: 100%; transition: transform 5s cubic-bezier(0.1, 0, 0.1, 1); }
+
+        #result-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 101; text-align: center; pointer-events: none; opacity: 0; transition: 0.4s; }
+        #result-overlay.show { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+
+        /* --- UI ELEMENTS --- */
+        .styled-input { width: 100%; background: #000; border: 2px solid var(--border); padding: 18px; border-radius: 16px; color: white; font-weight: 700; margin-bottom: 20px; outline: none; }
+        .btn-play { width: 100%; padding: 20px; border-radius: 16px; border: none; font-weight: 800; cursor: pointer; background: var(--accent); color: #000; transition: 0.2s; }
+        .btn-play:disabled { background: #2a333d; color: #55606d; cursor: not-allowed; filter: grayscale(1); }
+
+        /* --- WAGER --- */
+        .wager-info { margin-top: 25px; padding: 20px; background: #000; border-radius: 20px; border: 1px solid var(--border); }
+        .wager-bar-bg { height: 8px; background: #1a222d; border-radius: 10px; margin-top: 10px; overflow: hidden; }
+        #wager-progress { height: 100%; background: var(--accent); width: 0%; transition: 1s ease-out; }
+
+        /* --- MODAL --- */
+        .modal { position: fixed; inset: 0; background: rgba(2, 6, 12, 0.98); display: none; align-items: center; justify-content: center; z-index: 20000; backdrop-filter: blur(20px); }
+        .modal.active { display: flex; }
+        .wallet-card { background: linear-gradient(145deg, #161f2c 0%, #0d131c 100%); padding: 40px; border-radius: 32px; border: 1px solid var(--border); width: 450px; text-align: center; }
+        .balance-display { background: rgba(0,0,0,0.3); padding: 25px; border-radius: 20px; margin: 20px 0; border: 1px solid var(--border); }
+        .balance-value { font-size: 42px; font-weight: 900; color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div id="auth-overlay">
+    <div class="login-card">
+        <h1 style="margin-bottom: 20px;">DONUT<span>FLIP</span></h1>
+        <div id="auth-box">
+            <input type="text" id="nick-input" class="styled-input" placeholder="Minecraft Nick">
+            <button class="btn-play" onclick="handleAuth()">VSTOUPIT</button>
+        </div>
+        <div id="verify-box" style="display:none">
+            <div id="v-msg" style="background: #000; padding: 20px; border-radius: 15px; color: var(--accent); font-weight: 800; font-family: monospace;"></div>
+            <p style="margin-top: 15px; font-size: 13px; color: var(--text-dim);">Pošli tuhle zprávu uživateli <strong>tickony</strong> ve hře pro ověření účtu.</p>
+        </div>
+    </div>
+</div>
+
+<header>
+    <div style="font-weight: 800; font-size: 24px;">DONUT<span>FLIP</span></div>
+    <div class="header-right">
+        <div class="user-pill" onclick="openWallet()">
+            <span id="display-bal" style="color: var(--accent); font-weight: 800; font-size: 18px;">0 $</span>
+            <img id="display-avatar" src="" style="width:35px; height:35px; border-radius:8px; background:#000;">
+        </div>
+        <button class="btn-logout" onclick="logout()">ODHLÁSIT</button>
+    </div>
+</header>
+
+<div class="main-content">
+    <div class="sidebar">
+        <label style="font-size: 12px; font-weight: 800; color: var(--text-dim);">VÝŠE SÁZKY</label>
+        <input type="number" id="bet-amount" class="styled-input" value="1000">
+        <button id="spin-button" class="btn-play" onclick="playGame()">ROZTOČIT KOLO</button>
+
+        <div class="wager-info">
+            <div style="display:flex; justify-content:space-between; font-size: 12px; font-weight: 700;">
+                <span>PROTOČENO</span>
+                <span id="wager-text">0 / 0 $</span>
+            </div>
+            <div class="wager-bar-bg"><div id="wager-progress"></div></div>
+            <p style="font-size: 10px; color: var(--text-dim); margin-top: 10px;">Musíš protočit 5x svůj vklad, abys mohl vybrat peníze.</p>
+        </div>
+    </div>
+
+    <div style="display:flex; flex-grow:1; align-items:center; justify-content:center; position:relative;">
+        <div id="result-overlay">
+            <div id="res-status" style="font-weight: 800; font-size: 24px;"></div>
+            <div id="res-value" style="font-size: 50px; font-weight: 900;"></div>
+        </div>
+        <div class="wheel-container">
+            <div class="pointer"></div>
+            <canvas id="wheel-canvas" width="500" height="500"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="wallet-modal">
+    <div class="wallet-card">
+        <h2 style="font-weight: 800;">Moje Peněženka</h2>
+        <div class="balance-display">
+            <div id="wallet-bal-val" class="balance-value">0 $</div>
+        </div>
+        <input type="number" id="tx-amount" class="styled-input" placeholder="Zadejte částku..." style="text-align: center;">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <button class="btn-play" onclick="submitTx('dep')">VLOŽIT</button>
+            <button id="withdraw-btn" class="btn-play" style="background:#1c2635; color:#fff;" onclick="submitTx('wit')">VYBRAT</button>
+        </div>
+        <div id="tx-info" style="display:none; margin-top:20px; padding:15px; border-radius:12px; color:var(--accent); font-size:13px; font-weight:600;"></div>
+        <p onclick="closeWallet()" style="margin-top:25px; cursor:pointer; color:var(--text-dim); font-weight:700;">Zavřít</p>
+    </div>
+</div>
+
+<script>
+    // Konfigurace Firebase (Doplň své klíče)
+    const firebaseConfig = { apiKey: "AIzaSyDNrZQJDgTITduIm62uTU1QTaDLBMZ9hws", authDomain: "donutgamba.firebaseapp.com", projectId: "donutgamba", appId: "1:785116130586:web:e7a4c72b9fed8a9efdd0a3" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let user = null, userId = localStorage.getItem('donut_id'), isPlaying = false, currentRotation = 0;
+
+    const sectors = [
+        { label: '0x', color: '#161f2c', m: 0 }, { label: '2x', color: '#4cf09a', m: 2 },
+        { label: '0x', color: '#161f2c', m: 0 }, { label: '1.5x', color: '#9d4edd', m: 1.5 },
+        { label: '0x', color: '#161f2c', m: 0 }, { label: '5x', color: '#f5c842', m: 5 }
+    ];
+
+    function drawWheel() {
+        const canvas = document.getElementById('wheel-canvas'), ctx = canvas.getContext('2d');
+        const arc = (Math.PI * 2) / 6;
+        sectors.forEach((s, i) => {
+            const angle = i * arc;
+            ctx.beginPath(); ctx.moveTo(250, 250); ctx.arc(250, 250, 250, angle, angle + arc);
+            ctx.fillStyle = s.color; ctx.fill();
+            ctx.save(); ctx.translate(250, 250); ctx.rotate(angle + arc / 2);
+            ctx.fillStyle = "#fff"; ctx.font = "bold 32px sans-serif"; ctx.textAlign = "right"; ctx.fillText(s.label, 230, 10); ctx.restore();
+        });
+    }
+    drawWheel();
+
+    async function handleAuth() {
+        const nick = document.getElementById('nick-input').value.trim();
+        if(!nick) return;
+        const snap = await db.collection('users').where('nick', '==', nick).get();
+        if(snap.empty) {
+            const vCode = Math.floor(1000 + Math.random()*8999);
+            const res = await db.collection('users').add({ nick, balance: 0, vCode, verified: false, gamesPlayed: 0, wagerRequired: 0, wagerDone: 0 });
+            userId = res.id;
+        } else { userId = snap.docs[0].id; }
+        localStorage.setItem('donut_id', userId);
+        startSync();
+    }
+
+    function startSync() {
+        if(!userId) return;
+        db.collection('users').doc(userId).onSnapshot(doc => {
+            if(!doc.exists) { logout(); return; }
+            user = doc.data();
+            if(user.verified) {
+                document.getElementById('auth-overlay').style.display = 'none';
+                document.getElementById('display-bal').innerText = user.balance.toLocaleString() + " $";
+                document.getElementById('wallet-bal-val').innerText = user.balance.toLocaleString() + " $";
+                document.getElementById('display-avatar').src = `https://minotar.net/helm/${user.nick}/35`;
+                
+                const req = user.wagerRequired || 0, done = user.wagerDone || 0;
+                const perc = req > 0 ? Math.min(100, (done / req) * 100) : 100;
+                document.getElementById('wager-progress').style.width = perc + "%";
+                document.getElementById('wager-text').innerText = `${Math.floor(done)} / ${Math.floor(req)} $`;
+                document.getElementById('withdraw-btn').disabled = done < req;
+            } else {
+                document.getElementById('auth-box').style.display = 'none';
+                document.getElementById('verify-box').style.display = 'block';
+                document.getElementById('v-msg').innerText = `/msg tickony ${user.vCode}`;
+            }
+        });
+    }
+    if(userId) startSync();
+
+    function logout() {
+        localStorage.removeItem('donut_id');
+        location.reload();
+    }
+
+    async function playGame() {
+        const bet = parseInt(document.getElementById('bet-amount').value);
+        if(isPlaying || !user || bet > user.balance || bet < 100) return;
+
+        isPlaying = true;
+        document.getElementById('spin-button').disabled = true;
+        document.getElementById('result-overlay').classList.remove('show');
+
+        // Psychologie: Prvních 5 her šance 65%, pak 20%
+        const winChance = (user.gamesPlayed || 0) < 5 ? 0.65 : 0.20;
+        let sectorIndex = Math.random() < winChance ? [1, 3, 5][Math.floor(Math.random()*3)] : [0, 2, 4][Math.floor(Math.random()*3)];
+
+        const sectorDeg = 360 / 6;
+        const targetPos = (270 - (sectorIndex * sectorDeg) - (sectorDeg / 2));
+        currentRotation += (360 * 10) + (targetPos - (currentRotation % 360));
+        document.getElementById('wheel-canvas').style.transform = `rotate(${currentRotation}deg)`;
+
+        await db.collection('users').doc(userId).update({
+            balance: firebase.firestore.FieldValue.increment(-bet),
+            gamesPlayed: firebase.firestore.FieldValue.increment(1),
+            wagerDone: firebase.firestore.FieldValue.increment(bet)
+        });
+
+        setTimeout(async () => {
+            const win = Math.floor(bet * sectors[sectorIndex].m);
+            showResult(win, bet);
+            if(win > 0) await db.collection('users').doc(userId).update({ balance: firebase.firestore.FieldValue.increment(win) });
+            isPlaying = false;
+            document.getElementById('spin-button').disabled = false;
+        }, 5000);
+    }
+
+    function showResult(win, bet) {
+        const over = document.getElementById('result-overlay'), status = document.getElementById('res-status'), val = document.getElementById('res-value');
+        if(win > 0) {
+            status.innerText = "VÝHRA"; status.style.color = "var(--accent)";
+            val.innerText = "+" + win.toLocaleString() + " $"; val.style.color = "var(--accent)";
+        } else {
+            status.innerText = "PROHRA"; status.style.color = "var(--red)";
+            val.innerText = "-" + bet.toLocaleString() + " $"; val.style.color = "var(--red)";
+        }
+        over.classList.add('show');
+    }
+
+    async function submitTx(type) {
+        const input = document.getElementById('tx-amount'), amt = Number(input.value), info = document.getElementById('tx-info');
+        if(!amt || amt < 100 || isNaN(amt)) return alert("Zadej platnou částku!");
+
+        if(type === 'wit') {
+            if(amt > user.balance || user.wagerDone < user.wagerRequired) return alert("Nelze vybrat!");
+            await db.collection('users').doc(userId).update({ balance: firebase.firestore.FieldValue.increment(-amt) });
+        }
+
+        await db.collection('requests').add({ nick: user.nick, userId, type, amount: amt, status: 'pending', timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+
+        info.style.display = 'block';
+        info.innerHTML = type === 'dep' ? `✅ Žádost odeslána. Pošli /pay tickony ${amt}` : `📤 Výběr odeslán. Admin ti peníze brzy pošle.`;
+        input.value = "";
+    }
+
+    function openWallet() { document.getElementById('wallet-modal').classList.add('active'); }
+    function closeWallet() { document.getElementById('wallet-modal').classList.remove('active'); }
+</script>
+</body>
+</html>
